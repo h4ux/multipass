@@ -23,6 +23,11 @@ Then
 ```
 Click on DHCP Server Tab of the new network and check the Enable Server checkbox
 ```
+
+It should look something like this:
+
+![image](https://user-images.githubusercontent.com/77572830/151146703-b06c034e-db96-4d6d-9869-68422e9659a0.png)
+
 ## Launch a multipass VM with cloud-init
 
 ```
