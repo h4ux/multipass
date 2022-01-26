@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+Help()
+{
+   echo
+   echo "Launch a multipass VM with cloud init"
+   echo
+   echo "Syntax: sudo sh launch-vm [-n|f|m|d|c|h]"
+   echo "options:"
+   echo "-n     Name of the instance"
+   echo "-f     cloud init file path"
+   echo "-m     memory for instance, defualt to 4GB if empty"
+   echo "-d     drive size for instance, defualt to 20GB if empty"
+   echo "-c     number of vCPU, defualt to 2 if empty"
+   echo "-v     name of the virtual network, defualt to vboxnet0"
+   echo "-h     display this help!!!"
+   echo
+}
+
+name=vm-$(openssl rand -hex 4)
+cloudinit=cloud-init-base.yaml
+memory=4G
+drive=20G
+cpu=2
+vlan=vboxnet0
+
+while getopts n:f:m:d:c:v:h params
+do
+    case "${params}" in
+        n) name=${OPTARG};;
+        f) cloudinit=${OPTARG};;
+        m) memory=${OPTARG};;
+        d) drive=${OPTARG};;
+        c) cpu=${OPTARG};;
+        v) vlan=${OPTARG};;
+        h) # display Help
+          Help
+          exit;;
+    esac
+done
+
+if [ "$EUID" -ne 0 ]
+  then echo "${RED}Please run using sudo (sudo launch-vm)${NC}"
+  echo "For help run sh launch-vm -h"
+  exit
+fi
+
+echo "Name: $name";
+echo "cloud-init: $cloudinit";
+echo "Memory: $memory";
+echo "Drive: $drive";
+echo "CPU: $cpu";
+echo "VLan: $vlan";
+
+multipass launch -c $cpu -d $drive -n $name -m $memory --cloud-init $cloudinit --timeout 900 -vvvv
+read -t 60 -p "I am going to wait for 60 seconds and stop the VM ..."
+multipass stop $name
+read -t 30 -p "I am going to wait for 30 seconds for VM to stop ..."
+sudo VBoxManage modifyvm $name --nic2 hostonly --hostonlyadapter2 vboxnet0
+multipass start $name
+multipass exec $name sudo netplan apply
+mkdir -p ~/multipass-mounts/$name
+touch ~/multipass-mounts/$name/SUCCESS
+multipass mount ~/multipass-mounts $name:/home/ubuntu/mac-mount

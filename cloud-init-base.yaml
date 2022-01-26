@@ -1,0 +1,49 @@
+#cloud-config
+output: {all: '| tee -a /var/log/cloud-init-output.log'}
+
+package_update: true
+package_upgrade: true
+
+packages:
+ - git
+ - curl
+ - wget
+ - zsh
+ - vim
+ - bash-completion
+ - pastebinit
+ - python3
+ - python3-pip
+ - apt-transport-https
+ - ca-certificates
+ - software-properties-common
+ - mlocate
+
+runcmd:
+ - pip3 install archey4
+ - runuser -l ubuntu -c 'sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"' 
+ - chsh -s $(which zsh) ubuntu
+ - fgGreen='%{$fg[green]%}'
+ - fgCyan='%{$fg[cyan]%}'
+ - fgReset='%{$reset_color%}'
+ - retStatus='${ret_status}'
+ - gitInfo='$(git_prompt_info)'
+ - runuser -l ubuntu -c "echo export PROMPT=\''${fgGreen}%n@%m${fgReset} ${retStatus} ${fgCyan}%c${fgReset} ${gitInfo}'\'" >> /home/ubuntu/.zshrc
+ - echo "source ~/.profile" >> /home/ubuntu/.zshrc
+ - echo "archey" >> /home/ubuntu/.zshrc
+ - git clone https://github.com/zsh-users/zsh-autosuggestions.git /home/ubuntu/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+ - git clone https://github.com/zsh-users/zsh-syntax-highlighting.git /home/ubuntu/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+ - sed 's/^plugins=.*/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' /home/ubuntu/.zshrc
+
+write_files:
+  - path: /etc/netplan/60-bridge.yaml
+    content: |
+      network:
+        ethernets:
+          enp0s8:                  
+            dhcp4: true
+            dhcp4-overrides: 
+              route-metric: 200
+        version: 2
+    owner: root:root
+    permissions: '0644'

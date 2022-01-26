@@ -1,0 +1,7 @@
+network:
+    ethernets:
+        enp0s8:                  
+            dhcp4: true
+            dhcp4-overrides: 
+                route-metric: 200
+    version: 2
