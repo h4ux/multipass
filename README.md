@@ -1,11 +1,27 @@
-# multipass Mac deployment script with cloud-init
+# Multipass Mac deployment script with cloud-init
 
 Please note the script does not check or validate the input, just use the help and follow the instructions
 
-This script also assume that you have created a a virtual network on VirtualBox
-If you didn't, please follow this steps:
+This script also assume the following: 
 
-Open terminal and run
+- You have VirtualBox installed
+- You have Multipass Installed
+- You have set multipass local.driver to VirtualBox
+- You have created a virtual network on VirtualBox
+
+If you didn't do any of the following, please follow this steps:
+
+> To install VirtualBox please visit: [VirtualBox Download](https://www.oracle.com/technetwork/server-storage/virtualbox/downloads/index.html)
+> 
+> To install Multipass You can use **brew install --cask multipass** but i suggest to use Multipass PKG as it installs also a nice tool that seats in the Menu bar.
+Grab it here: [Multipass Mac download](https://multipass.run/download/macos)
+
+> To set multipass driver to VirtualBox run
+>```
+>sudo multipass set local.driver=virtualbox
+>```
+
+### To create a virtual network open terminal and run
 
 ```
 Sudo VirtualBox
