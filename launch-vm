@@ -30,6 +30,15 @@ petname(){
    name="snow-$(shuf -n 1 names/names.txt)-$(shuf -n 1 names/adjectives.txt)"
 }
 
+createNetwork(){
+    VBoxManage hostonlyif create
+    vlan=$(VBoxManage list hostonlyifs | grep ^Name: | tail -n 1 | awk '{print $2}')
+    msg "${YELLOW}New vlan created named: $vlan ${NC}"
+    VBoxManage hostonlyif ipconfig $vlan --ip 192.168.56.1 
+    VBoxManage dhcpserver add --ifname $vlan --ip 192.168.56.1 --netmask 255.255.255.0 --lowerip 192.168.56.100 --upperip 192.168.56.200 
+    VBoxManage dhcpserver modify --ifname $vlan --enable
+}
+
 help(){
   cat <<EOF
 Usage: sudo ./$(basename "${BASH_SOURCE[0]}") [-h] [-v] -n name -f cloud-init.yaml -m 1GB -c 2 -l vboxnet0
@@ -126,6 +135,20 @@ issu # check if user is root
         case $yn in
             Yes ) break;;
             "Enter Name" ) read -p "Enter name: " name; break;;
+            Exit ) exit;;
+        esac
+    done
+  fi
+
+
+  if ! VBoxManage list hostonlyifs | grep ^Name: | grep -q $vlan; then
+    msg "vlan does not exist? this is the list of vlans:"
+    msg "${YELLOW}$(VBoxManage list hostonlyifs | grep ^Name:)${NC}"
+    msg "Create a new vlan? (y/n)"
+    select yn in "Yes" "Enter Name" "Exit"; do
+        case $yn in
+            Yes ) createNetwork; break;;
+            "Enter Name" ) read -p "Enter name: " vlan; break;;
             Exit ) exit;;
         esac
     done
