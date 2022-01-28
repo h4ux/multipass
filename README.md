@@ -9,6 +9,8 @@ This script also assume the following:
 - You have set multipass local.driver to VirtualBox
 - You have created a virtual network on VirtualBox
 
+** you will be notified if you don't have any of the above
+
 If you didn't do any of the following, please follow this steps:
 
 > To install VirtualBox please visit: [VirtualBox Download](https://www.oracle.com/technetwork/server-storage/virtualbox/downloads/index.html)
@@ -22,6 +24,7 @@ Grab it here: [Multipass Mac download](https://multipass.run/download/macos)
 >```
 
 ### To create a virtual network open terminal and run
+** the script can create one for you as well, just follow the prompt
 
 ```
 Sudo VirtualBox
