@@ -47,23 +47,29 @@ It should look something like this:
 ## Launch a multipass VM with cloud-init
 
 ```
-Syntax: sudo sh launch-vm [-n|f|m|d|c|h]
-options:
--n     Name of the instance
--f     cloud init file path
--m     memory for instance, default to 4GB if empty
--d     drive size for instance, default to 20GB if empty
--c     number of vCPU, default to 2 if empty
--v     name of the virtual network, default to vboxnet0
--h     display this help!!!
+Usage: sudo ./launch-vm [-h] [-v] -n name -f cloud-init.yaml -m 1GB -c 2 -l vboxnet0
+    
+Launch a multipass VM with cloud init
+    
+Available options:
+    
+-h, --help        Print this help and exit
+-v, --verbose     Print script debug info    
+-n, --name        Name of the instance
+-f, --cloud-init  cloud init file path
+-m, --mem         memory for instance, defualt to 4GB if empty
+-d, --hd          drive size for instance, defualt to 20GB if empty
+-c, --cpu         number of vCPU, defualt to 2 if empty
+-l, --vlan        name of the virtual network, defualt to vboxnet0 if empty
+-t, --timeout     timeout for launch script, defualt to 900 if empty
 ```
 
 ```
-Please run using sudo (sudo sh launch-vm)
+Please run using sudo (sudo ./launch-vm)
 For help run sh launch-vm -h
 ```
 
 Example:
 ```
-sudo sh launch-vm -n k8-kind -f cloud-init-k8-kind.yaml
+sudo ./launch-vm -n k8-kind -f cloud-init-k8-kind.yaml
 ```

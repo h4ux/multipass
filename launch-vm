@@ -1,65 +1,170 @@
 #!/usr/bin/env bash
 
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+set -Eeuo pipefail
+trap cleanup SIGINT SIGTERM ERR EXIT
 
-Help()
-{
-   echo
-   echo "Launch a multipass VM with cloud init"
-   echo
-   echo "Syntax: sudo sh launch-vm [-n|f|m|d|c|h]"
-   echo "options:"
-   echo "-n     Name of the instance"
-   echo "-f     cloud init file path"
-   echo "-m     memory for instance, defualt to 4GB if empty"
-   echo "-d     drive size for instance, defualt to 20GB if empty"
-   echo "-c     number of vCPU, defualt to 2 if empty"
-   echo "-v     name of the virtual network, defualt to vboxnet0"
-   echo "-h     display this help!!!"
-   echo
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
+
+issu(){
+  if [ "$EUID" -ne 0 ]; then 
+    msg "${YELLOW}Please run using sudo (sudo ./launch-vm)${NC}"
+    msg "For help run: ./launch-vm -h"
+    exit
+  fi
+  return 0
 }
 
-name=vm-$(openssl rand -hex 4)
-cloudinit=cloud-init-base.yaml
-memory=4G
-drive=20G
-cpu=2
-vlan=vboxnet0
+mysleep(){
+  x="${1-}"
+  z="${2-}"
+  while [ $x -gt 0 ]
+  do
+    sleep 1
+    text=$(sed "s/Xs/$x/g" <<< $z )
+    msg "\e[1A\e[${YELLOW} $text ${NC}"
+    x=$(( $x - 1 ))
+  done
+}
 
-while getopts n:f:m:d:c:v:h params
-do
-    case "${params}" in
-        n) name=${OPTARG};;
-        f) cloudinit=${OPTARG};;
-        m) memory=${OPTARG};;
-        d) drive=${OPTARG};;
-        c) cpu=${OPTARG};;
-        v) vlan=${OPTARG};;
-        h) # display Help
-          Help
-          exit;;
-    esac
-done
+petname(){
+   name="snow-$(shuf -n 1 names/names.txt)-$(shuf -n 1 names/adjectives.txt)"
+}
 
-if [ "$EUID" -ne 0 ]
-  then echo "${RED}Please run using sudo (sudo launch-vm)${NC}"
-  echo "For help run sh launch-vm -h"
+help(){
+  cat <<EOF
+Usage: sudo ./$(basename "${BASH_SOURCE[0]}") [-h] [-v] -n name -f cloud-init.yaml -m 1GB -c 2 -l vboxnet0
+    
+Launch a multipass VM with cloud init
+    
+Available options:
+    
+-h, --help        Print this help and exit
+-v, --verbose     Print script debug info    
+-n, --name        Name of the instance
+-f, --cloud-init  cloud init file path
+-m, --mem         memory for instance, defualt to 4GB if empty
+-d, --hd          drive size for instance, defualt to 20GB if empty
+-c, --cpu         number of vCPU, defualt to 2 if empty
+-l, --vlan        name of the virtual network, defualt to vboxnet0 if empty
+-t, --timeout     timeout for launch script, defualt to 900 if empty
+EOF
   exit
-fi
+}
 
-echo "Name: $name";
-echo "cloud-init: $cloudinit";
-echo "Memory: $memory";
-echo "Drive: $drive";
-echo "CPU: $cpu";
-echo "VLan: $vlan";
+cleanup() {
+  trap - SIGINT SIGTERM ERR EXIT
+  # script cleanup here
+}
 
-multipass launch -c $cpu -d $drive -n $name -m $memory --cloud-init $cloudinit --timeout 900 -vvvv
-read -t 60 -p "I am going to wait for 60 seconds and stop the VM ..."
+setup_colors() {
+  if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
+    NC='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m' BLUE='\033[0;34m' PURPLE='\033[0;35m' CYAN='\033[0;36m' YELLOW='\033[1;33m'
+  else
+    NC='' RED='' GREEN='' ORANGE='' BLUE='' PURPLE='' CYAN='' YELLOW=''
+  fi
+}
+
+msg() {
+  echo >&2 -e "${1-}"
+}
+
+die() {
+  local msg=$1
+  local code=${2-1} # default exit status 1
+  msg "$msg"
+  exit "$code"
+}
+
+parse_params() {
+  # defaults
+  cloudinit=cloud-init-base.yaml
+  memory=4G
+  drive=20G
+  cpu=2
+  vlan=vboxnet0
+  timeout=900
+  debug=""
+
+  while :; do
+    case "${1-}" in
+    -h | --help) help ;;
+    -v | --verbose) set -x 
+      debug="-vvvv";;
+    --no-color) NO_COLOR=1 ;;
+    -n | --name) name="${2-}"
+      shift;;
+    -f | --cloud-init) cloudinit="${2-}"
+      shift;;
+    -m | --mem) memory="${2-}"
+      shift;;
+    -d | --hd) drive="${2-}"
+      shift;;
+    -c | --cpu) cpu="${2-}"
+      shift;;
+    -l | --vlan) vlan="${2-}"
+      shift;;
+    -t | --timeout) timeout="${2-}"
+      shift;;
+    -?*) die "Unknown option: $1" ;;
+    *) break ;;
+    esac
+    shift
+  done
+  return 0
+}
+
+
+setup_colors # setup colors
+parse_params "$@" # parse command line
+issu # check if user is root
+
+  if [[ -z "${name-}" ]]; then
+    petname
+    
+    msg "You enter no name, so I generated one for you, I will call him: ${YELLOW}$name${NC}, is this fine? (y/n)"
+    select yn in "Yes" "Enter Name" "Exit"; do
+        case $yn in
+            Yes ) break;;
+            "Enter Name" ) read -p "Enter name: " name; break;;
+            Exit ) exit;;
+        esac
+    done
+  fi
+
+msg "${YELLOW}The multipass command that I'm about to run:${NC}"
+msg "${CYAN}multipass launch -c $cpu -d $drive -n $name -m $memory --cloud-init $cloudinit --timeout $timeout $debug${NC}"
+
+multipass launch -c $cpu -d $drive -n $name -m $memory --cloud-init $cloudinit --timeout $timeout $debug
+mysleep "60" "I am going to sleep for Xs seconds before stopping the Vm just in case..."
+
+cloud_init_status=0
+while [ $cloud_init_status != "1" ]
+  do
+    sleep 1
+    cloud_init_status=$(multipass exec $name - cloud-init status | grep -c "done")
+    msg "$name cloud-init status: $cloud_init_status"
+  done
+
+
 multipass stop $name
-read -t 30 -p "I am going to wait for 30 seconds for VM to stop ..."
-sudo VBoxManage modifyvm $name --nic2 hostonly --hostonlyadapter2 vboxnet0
+
+vm_status=0
+while [ $vm_status != "Stopped" ]
+  do
+    sleep 1
+    vm_status=$(multipass info $name  --format csv | tail -n +2 | awk -F "\"*,\"*" '{print $2}')
+    msg "$name status: $vm_status"
+  done
+
+vlan_status=0
+while [ $vlan_status != "1" ]
+  do
+    sudo VBoxManage modifyvm $name --nic2 hostonly --hostonlyadapter2 $vlan
+    sleep 1
+    vlan_status=$(sudo VBoxManage showvminfo $name | grep "NIC 2" | grep -c "$vlan")
+    msg "$name vlan $vlan status: $vlan_status"
+  done
+
 multipass start $name
 multipass exec $name sudo netplan apply
 mkdir -p ~/multipass-mounts/$name
