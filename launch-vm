@@ -14,6 +14,36 @@ issu(){
   return 0
 }
 
+multipassdriver(){
+  driver=$(sudo multipass get local.driver)
+  
+  if [[ $driver != "virtualbox" ]]; then
+    msg "Looks like your multipass driver is set to ${YELLOW}$driver${NC}"
+    msg "Whould like it to be changed to virtualbox? (y/n)"
+    select yn in "Yes" "Exit"; do
+        case $yn in
+            Yes ) sudo multipass set local.driver=virtualbox; break;;
+            Exit ) exit;;
+        esac
+    done
+  fi
+}
+
+checkforcmd(){
+  cmd="${1-}"
+  version="${2-}"
+  if ! command -v $cmd &> /dev/null
+  then
+    msg "${RED}$cmd could not be found!!${NC}"
+    msg "Please install $cmd and try again"
+    msg "https://www.oracle.com/virtualization/technologies/vm/downloads/virtualbox-downloads.html"
+    msg "https://multipass.run/download/macos"
+    exit
+  fi
+  msg "${CYAN}Great, looks like you have $cmd installed${NC}"
+  $cmd $version
+}
+
 mysleep(){
   x="${1-}"
   z="${2-}"
@@ -124,6 +154,9 @@ parse_params() {
 
 
 setup_colors # setup colors
+checkforcmd "VBoxManage" "-v" # check for virtualbox
+checkforcmd "multipass" "version" # check for multipass
+multipassdriver # check for multipass driver
 parse_params "$@" # parse command line
 issu # check if user is root
 
