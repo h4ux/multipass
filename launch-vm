@@ -14,6 +14,7 @@ issu(){
   return 0
 }
 
+
 multipassdriver(){
   driver=$(sudo multipass get local.driver)
   
@@ -114,6 +115,29 @@ die() {
   exit "$code"
 }
 
+
+# backup this way does not work as the image get currupted
+backupinstace(){
+  instance="${1-}"
+  newinstance="${2-}"
+  n_mem=$(cat /var/root/Library/Application\ Support/multipassd/virtualbox/multipassd-vm-instances.json | python3 -c "import sys, json; print(json.load(sys.stdin)['$instance']['mem_size'])")
+  n_cpu=$(cat /var/root/Library/Application\ Support/multipassd/virtualbox/multipassd-vm-instances.json | python3 -c "import sys, json; print(json.load(sys.stdin)['$instance']['num_cores'])")
+  n_disk=$(cat /var/root/Library/Application\ Support/multipassd/virtualbox/multipassd-vm-instances.json | python3 -c "import sys, json; print(json.load(sys.stdin)['$instance']['disk_space'])")
+  n_image=$(cat /var/root/Library/Application\ Support/multipassd/virtualbox/vault/multipassd-instance-image-records.json | python3 -c "import sys, json; print(json.load(sys.stdin)['$instance']['image']['original_release'])")  
+  instance_iso=$(cat /var/root/Library/Application\ Support/multipassd/virtualbox/vault/multipassd-instance-image-records.json | python3 -c "import sys, json; print(json.load(sys.stdin)['$instance']['image']['path'])")
+
+  multipass launch -c $n_cpu -d $n_disk -n $newinstance -m $n_mem # for now use latest $n_image
+  multipass stop $newinstance
+  
+  new_instance_iso=$(cat /var/root/Library/Application\ Support/multipassd/virtualbox/vault/multipassd-instance-image-records.json | python3 -c "import sys, json; print(json.load(sys.stdin)['$newinstance']['image']['path'])")
+
+  sudo cp -f "/var/root/Library/Application Support/multipassd/virtualbox/vault/instances/${instance}/cloud-init-config.iso" "/var/root/Library/Application Support/multipassd/virtualbox/vault/instances/${newinstance}/cloud-init-config.iso"
+  sudo cp -f "${instance_iso}" "${new_instance_iso}"
+  multipass start $newinstance
+}
+
+#backupinstace "k8-kind" "k8-backup"
+
 parse_params() {
   # defaults
   cloudinit=cloud-init-base.yaml
@@ -201,20 +225,20 @@ while [ $cloud_init_status != "1" ]
     msg "$name cloud-init status: $cloud_init_status"
   done
 
-
 multipass stop $name
 
 vm_status=0
 while [ $vm_status != "Stopped" ]
   do
     sleep 1
-    vm_status=$(multipass info $name  --format csv | tail -n +2 | awk -F "\"*,\"*" '{print $2}')
+    vm_status=$(multipass list --format csv | grep "k8-minikube" | awk -F '"*,"*' '{print $2}')
     msg "$name status: $vm_status"
   done
 
 vlan_status=0
 while [ $vlan_status != "1" ]
   do
+    msg "${YELLOW}Running: sudo VBoxManage modifyvm $name --nic2 hostonly --hostonlyadapter2 $vlan${NC}"
     sudo VBoxManage modifyvm $name --nic2 hostonly --hostonlyadapter2 $vlan
     sleep 1
     vlan_status=$(sudo VBoxManage showvminfo $name | grep "NIC 2" | grep -c "$vlan")
@@ -226,3 +250,6 @@ multipass exec $name sudo netplan apply
 mkdir -p ~/multipass-mounts/$name
 touch ~/multipass-mounts/$name/SUCCESS
 multipass mount ~/multipass-mounts $name:/home/ubuntu/mac-mount
+exit
+#multipass mount /Users/$SUDO_USER $name:/home/$SUDO_USER
+#multipass mount ~/ $name:/home/$SUDO_USER

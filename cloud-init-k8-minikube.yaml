@@ -28,21 +28,14 @@ runcmd:
  - sudo usermod -aG docker ubuntu
  - sudo curl -L "https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
  - sudo chmod +x /usr/local/bin/kubectl
- - sudo curl -L "https://kind.sigs.k8s.io/dl/v0.11.1/kind-$(uname)-amd64" -o /usr/local/bin/kind
- - sudo chmod +x /usr/local/bin/kind
+ - curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+ - sudo install minikube-linux-amd64 /usr/local/bin/minikube
  - sudo snap install kustomize
  - sudo snap install helm --classic
- #- curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
- #- chmod 700 get_helm.sh
- #- ./get_helm.sh
  - sudo snap install skaffold
  - sudo pip3 install archey4
  - runuser -l ubuntu -c 'sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"' 
  - chsh -s $(which zsh) ubuntu
- - mkdir /home/ubuntu/.oh-my-zsh/completions"
- - kind completion zsh > /home/ubuntu/.oh-my-zsh/completions/_kind
- - echo "autoload -U compinit" >> /home/ubuntu/.zshrc
- - echo "compinit -i" >> /home/ubuntu/.zshrc
  - echo "source ~/.profile" >> /home/ubuntu/.zshrc
  - echo "archey" >> /home/ubuntu/.zshrc
  - git clone https://github.com/zsh-users/zsh-autosuggestions.git /home/ubuntu/.oh-my-zsh/custom/plugins/zsh-autosuggestions
